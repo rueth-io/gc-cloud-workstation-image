@@ -1,0 +1,19 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+- args:
+  - --build-arg=AR_LOCATION=${LOCATION}
+  - --build-arg=AR_PROJECT_ID=${PROJECT_ID}
+  - --cache=true
+  - --cache-ttl=48h
+  - --context=dir://container-images/code-oss
+  - --destination=${LOCATION}-docker.pkg.dev/${PROJECT_ID}/cloud-workstations-images/code-oss:${SHORT_SHA}_${BUILD_ID}
+  - --destination=${LOCATION}-docker.pkg.dev/${PROJECT_ID}/cloud-workstations-images/code-oss:latest
+  - --dockerfile=container-images/code-oss/Dockerfile
+  - --log-format=text
+  - --log-timestamp=false
+  - --verbosity=info
+  id: "Build use-cases/model-fine-tuning-pipeline/data-preparation/gemma-it/src image"
+  name: "gcr.io/kaniko-project/executor:latest"
+  waitFor: ["-"]
