@@ -1,0 +1,1 @@
+../_shared_config/git_variables.tf

@@ -1,0 +1,31 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+- args:
+  - --cache=true
+  - --cache-ttl=48h
+  - --context=dir://test/ci-cd/container_images
+  - --destination=${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest
+  - --dockerfile=ci-cd/container-images/Dockerfile.runner
+  - --log-format=text
+  - --log-timestamp=false
+  - --verbosity=info
+  id: "Build runner image"
+  name: "gcr.io/kaniko-project/executor:latest"
+  waitFor: ["-"]
+
+- name: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest"
+  id: "Apply Terraform changes"
+  entrypoint: "bash"
+  args:
+    - "-c"
+    - |
+      export TERM="xterm"
+
+      export GCCWSI_REPO_ROOT="/workspace"
+      terraform/apply.sh
+  waitFor:
+  - "Build runner image"
+
+timeout: 60m
