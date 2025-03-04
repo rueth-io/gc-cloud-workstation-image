@@ -1,0 +1,105 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+- args:
+  - --cache=true
+  - --cache-ttl=48h
+  - --context=dir://test/ci-cd/container_images
+  - --destination=${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest
+  - --dockerfile=ci-cd/container-images/Dockerfile.runner
+  - --log-format=text
+  - --log-timestamp=false
+  - --verbosity=info
+  id: "Build runner image"
+  name: "gcr.io/kaniko-project/executor:latest"
+  waitFor: ["-"]
+
+- name: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest"
+  id: "Prepare build environment"
+  entrypoint: "bash"
+  args:
+    - "-c"
+    - |
+      export TERM="xterm"
+
+      export GCCWSI_REPO_ROOT="/workspace"
+
+      source $${GCCWSI_REPO_ROOT}/terraform/_shared_config/scripts/set_environment_variables.sh
+
+      gcloud secrets versions access latest \
+      --out-file=$${GCCWSI_REPO_ROOT}/gccwsi-git-token \
+      --secret=gccwsi-git-token
+  waitFor:
+  - "Build runner image"
+
+- name: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest"
+  id: "Apply the 'initialize' Terraservice"
+  entrypoint: "bash"
+  args:
+    - "-c"
+    - |
+      export TERM="xterm"
+
+      export GCCWSI_REPO_ROOT="/workspace"
+
+      source $${GCCWSI_REPO_ROOT}/terraform/_shared_config/scripts/set_environment_variables.sh
+
+      mkdir -p $$(dirname $${git_token_file}) && \
+      ln -s $${GCCWSI_REPO_ROOT}/gccwsi-git-token $${git_token_file}
+
+      cd $${GCCWSI_REPO_ROOT}/terraform/initialize && \
+      terraform init && \
+      terraform plan -input=false -out=tfplan && \
+      terraform apply -input=false tfplan && \
+      rm tfplan
+  waitFor:
+  - "Prepare build environment"
+
+- name: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest"
+  id: "Apply the Git Provider Terraservice"
+  entrypoint: "bash"
+  args:
+    - "-c"
+    - |
+      export TERM="xterm"
+
+      export GCCWSI_REPO_ROOT="/workspace"
+
+      source $${GCCWSI_REPO_ROOT}/terraform/_shared_config/scripts/set_environment_variables.sh
+
+      mkdir -p $$(dirname $${git_token_file}) && \
+      ln -s $${GCCWSI_REPO_ROOT}/gccwsi-git-token $${git_token_file}
+
+      cd $${GCCWSI_REPO_ROOT}/terraform/$${git_provider} && \
+      terraform init && \
+      terraform plan -input=false -out=tfplan && \
+      terraform apply -input=false tfplan && \
+      rm tfplan
+  waitFor:
+  - "Apply the 'initialize' Terraservice"
+
+- name: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/ci-cd/runner:latest"
+  id: "Apply the 'cloudbuild' Terraservice"
+  entrypoint: "bash"
+  args:
+    - "-c"
+    - |
+      export TERM="xterm"
+
+      export GCCWSI_REPO_ROOT="/workspace"
+
+      source $${GCCWSI_REPO_ROOT}/terraform/_shared_config/scripts/set_environment_variables.sh
+
+      mkdir -p $$(dirname $${git_token_file}) && \
+      ln -s $${GCCWSI_REPO_ROOT}/gccwsi-git-token $${git_token_file}
+
+      cd $${GCCWSI_REPO_ROOT}/terraform/cloudbuild && \
+      terraform init && \
+      terraform plan -input=false -out=tfplan && \
+      terraform apply -input=false tfplan && \
+      rm tfplan
+  waitFor:
+  - "Apply the Git Provider Terraservice"
+
+timeout: 60m

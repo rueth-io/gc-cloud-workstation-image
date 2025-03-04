@@ -1,0 +1,8 @@
+# IDE
+.vscode/
+*.code-workspace
+
+# Terraform
+.terraform/
+terraform.tfstate*
+tfplan
